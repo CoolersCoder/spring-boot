@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2015 the original author or authors.
+ * Copyright 2012-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,7 @@
 
 package org.springframework.boot.autoconfigure.cassandra;
 
-import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.util.StringUtils;
+import java.util.List;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.QueryOptions;
@@ -33,11 +25,23 @@ import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.ReconnectionPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
 
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
+
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Cassandra.
  *
  * @author Julien Dubois
  * @author Phillip Webb
+ * @author Eddú Meléndez
+ * @author Stephane Nicoll
  * @since 1.3.0
  */
 @Configuration
@@ -45,8 +49,15 @@ import com.datastax.driver.core.policies.RetryPolicy;
 @EnableConfigurationProperties(CassandraProperties.class)
 public class CassandraAutoConfiguration {
 
-	@Autowired
-	private CassandraProperties properties;
+	private final CassandraProperties properties;
+
+	private final List<ClusterBuilderCustomizer> builderCustomizers;
+
+	public CassandraAutoConfiguration(CassandraProperties properties,
+			ObjectProvider<List<ClusterBuilderCustomizer>> builderCustomizers) {
+		this.properties = properties;
+		this.builderCustomizers = builderCustomizers.getIfAvailable();
+	}
 
 	@Bean
 	@ConditionalOnMissingBean
@@ -55,6 +66,9 @@ public class CassandraAutoConfiguration {
 		Cluster.Builder builder = Cluster.builder()
 				.withClusterName(properties.getClusterName())
 				.withPort(properties.getPort());
+		if (properties.getUsername() != null) {
+			builder.withCredentials(properties.getUsername(), properties.getPassword());
+		}
 		if (properties.getCompression() != null) {
 			builder.withCompression(properties.getCompression());
 		}
@@ -77,11 +91,21 @@ public class CassandraAutoConfiguration {
 		}
 		String points = properties.getContactPoints();
 		builder.addContactPoints(StringUtils.commaDelimitedListToStringArray(points));
+
+		customize(builder);
 		return builder.build();
 	}
 
+	private void customize(Cluster.Builder builder) {
+		if (this.builderCustomizers != null) {
+			for (ClusterBuilderCustomizer customizer : this.builderCustomizers) {
+				customizer.customize(builder);
+			}
+		}
+	}
+
 	public static <T> T instantiate(Class<T> type) {
-		return BeanUtils.instantiate(type);
+		return BeanUtils.instantiateClass(type);
 	}
 
 	private QueryOptions getQueryOptions() {

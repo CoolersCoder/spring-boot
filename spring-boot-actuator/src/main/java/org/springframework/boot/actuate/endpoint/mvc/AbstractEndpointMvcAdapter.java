@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2015 the original author or authors.
+ * Copyright 2012-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,14 @@ import org.springframework.util.Assert;
  * @author Phillip Webb
  * @since 1.3.0
  */
-public abstract class AbstractEndpointMvcAdapter<E extends Endpoint<?>> implements
-		MvcEndpoint {
+public abstract class AbstractEndpointMvcAdapter<E extends Endpoint<?>>
+		implements NamedMvcEndpoint {
 
 	private final E delegate;
 
+	/**
+	 * Endpoint URL path.
+	 */
 	private String path;
 
 	/**
@@ -55,6 +58,11 @@ public abstract class AbstractEndpointMvcAdapter<E extends Endpoint<?>> implemen
 
 	public E getDelegate() {
 		return this.delegate;
+	}
+
+	@Override
+	public String getName() {
+		return this.delegate.getId();
 	}
 
 	@Override

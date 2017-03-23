@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2015 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import javax.servlet.Servlet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -33,14 +34,17 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnNotWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
 import org.springframework.boot.autoconfigure.template.TemplateLocation;
-import org.springframework.boot.autoconfigure.web.WebMvcAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.ConditionalOnEnabledResourceChain;
+import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.ui.freemarker.FreeMarkerConfigurationFactory;
 import org.springframework.ui.freemarker.FreeMarkerConfigurationFactoryBean;
+import org.springframework.web.servlet.resource.ResourceUrlEncodingFilter;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfig;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver;
@@ -50,6 +54,7 @@ import org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver;
  *
  * @author Andy Wilkinson
  * @author Dave Syer
+ * @author Kazuki Shimizu
  * @since 1.1.0
  */
 @Configuration
@@ -62,17 +67,21 @@ public class FreeMarkerAutoConfiguration {
 	private static final Log logger = LogFactory
 			.getLog(FreeMarkerAutoConfiguration.class);
 
-	@Autowired
-	private ApplicationContext applicationContext;
+	private final ApplicationContext applicationContext;
 
-	@Autowired
-	private FreeMarkerProperties properties;
+	private final FreeMarkerProperties properties;
+
+	public FreeMarkerAutoConfiguration(ApplicationContext applicationContext,
+			FreeMarkerProperties properties) {
+		this.applicationContext = applicationContext;
+		this.properties = properties;
+	}
 
 	@PostConstruct
 	public void checkTemplateLocationExists() {
 		if (this.properties.isCheckTemplateLocation()) {
 			TemplateLocation templatePathLocation = null;
-			List<TemplateLocation> locations = new ArrayList<TemplateLocation>();
+			List<TemplateLocation> locations = new ArrayList<>();
 			for (String templateLoaderPath : this.properties.getTemplateLoaderPath()) {
 				TemplateLocation location = new TemplateLocation(templateLoaderPath);
 				locations.add(location);
@@ -122,7 +131,7 @@ public class FreeMarkerAutoConfiguration {
 
 	@Configuration
 	@ConditionalOnClass(Servlet.class)
-	@ConditionalOnWebApplication
+	@ConditionalOnWebApplication(type = Type.SERVLET)
 	public static class FreeMarkerWebConfiguration extends FreeMarkerConfiguration {
 
 		@Bean
@@ -148,5 +157,13 @@ public class FreeMarkerAutoConfiguration {
 			return resolver;
 		}
 
+		@Bean
+		@ConditionalOnMissingBean
+		@ConditionalOnEnabledResourceChain
+		public ResourceUrlEncodingFilter resourceUrlEncodingFilter() {
+			return new ResourceUrlEncodingFilter();
+		}
+
 	}
+
 }

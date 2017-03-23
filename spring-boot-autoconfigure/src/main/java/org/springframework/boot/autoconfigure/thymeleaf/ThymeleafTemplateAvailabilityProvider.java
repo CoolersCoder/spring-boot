@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2015 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,13 @@ import org.springframework.util.ClassUtils;
  * @author Andy Wilkinson
  * @since 1.1.0
  */
-public class ThymeleafTemplateAvailabilityProvider implements
-		TemplateAvailabilityProvider {
+public class ThymeleafTemplateAvailabilityProvider
+		implements TemplateAvailabilityProvider {
 
 	@Override
 	public boolean isTemplateAvailable(String view, Environment environment,
 			ClassLoader classLoader, ResourceLoader resourceLoader) {
-		if (ClassUtils.isPresent("org.thymeleaf.spring4.SpringTemplateEngine",
+		if (ClassUtils.isPresent("org.thymeleaf.spring5.SpringTemplateEngine",
 				classLoader)) {
 			PropertyResolver resolver = new RelaxedPropertyResolver(environment,
 					"spring.thymeleaf.");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2015 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package org.springframework.boot.autoconfigure.hateoas;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
@@ -27,9 +29,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.data.rest.RepositoryRestMvcAutoConfiguration;
+import org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.HttpMessageConvertersAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.WebMvcAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,8 +45,6 @@ import org.springframework.hateoas.config.EnableHypermediaSupport.HypermediaType
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.plugin.core.Plugin;
 import org.springframework.web.bind.annotation.RequestMapping;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Spring HATEOAS's
@@ -67,6 +67,7 @@ public class HypermediaAutoConfiguration {
 
 	@Configuration
 	@ConditionalOnMissingBean(LinkDiscoverers.class)
+	@ConditionalOnClass(ObjectMapper.class)
 	@EnableHypermediaSupport(type = HypermediaType.HAL)
 	protected static class HypermediaConfiguration {
 
@@ -88,8 +89,8 @@ public class HypermediaAutoConfiguration {
 	 * {@link BeanPostProcessor} to apply any {@link Jackson2ObjectMapperBuilder}
 	 * configuration to the HAL {@link ObjectMapper}.
 	 */
-	private static class HalObjectMapperConfigurer implements BeanPostProcessor,
-			BeanFactoryAware {
+	private static class HalObjectMapperConfigurer
+			implements BeanPostProcessor, BeanFactoryAware {
 
 		private BeanFactory beanFactory;
 
@@ -125,4 +126,5 @@ public class HypermediaAutoConfiguration {
 		}
 
 	}
+
 }

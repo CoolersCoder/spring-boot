@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2015 the original author or authors.
+ * Copyright 2012-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.boot.autoconfigure.cassandra;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.ProtocolOptions;
 import com.datastax.driver.core.ProtocolOptions.Compression;
@@ -27,11 +25,14 @@ import com.datastax.driver.core.policies.LoadBalancingPolicy;
 import com.datastax.driver.core.policies.ReconnectionPolicy;
 import com.datastax.driver.core.policies.RetryPolicy;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
 /**
  * Configuration properties for Cassandra.
  *
  * @author Julien Dubois
  * @author Phillip Webb
+ * @author Mark Paluch
  * @since 1.3.0
  */
 @ConfigurationProperties(prefix = "spring.data.cassandra")
@@ -56,6 +57,16 @@ public class CassandraProperties {
 	 * Port of the Cassandra server.
 	 */
 	private int port = ProtocolOptions.DEFAULT_PORT;
+
+	/**
+	 * Login user of the server.
+	 */
+	private String username;
+
+	/**
+	 * Login password of the server.
+	 */
+	private String password;
 
 	/**
 	 * Compression supported by the Cassandra binary protocol.
@@ -103,6 +114,11 @@ public class CassandraProperties {
 	private int readTimeoutMillis = SocketOptions.DEFAULT_READ_TIMEOUT_MILLIS;
 
 	/**
+	 * Schema action to take at startup.
+	 */
+	private String schemaAction = "none";
+
+	/**
 	 * Enable SSL support.
 	 */
 	private boolean ssl = false;
@@ -137,6 +153,22 @@ public class CassandraProperties {
 
 	public void setPort(int port) {
 		this.port = port;
+	}
+
+	public String getUsername() {
+		return this.username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getPassword() {
+		return this.password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
 	}
 
 	public Compression getCompression() {
@@ -219,6 +251,14 @@ public class CassandraProperties {
 
 	public void setSsl(boolean ssl) {
 		this.ssl = ssl;
+	}
+
+	public String getSchemaAction() {
+		return this.schemaAction;
+	}
+
+	public void setSchemaAction(String schemaAction) {
+		this.schemaAction = schemaAction;
 	}
 
 }

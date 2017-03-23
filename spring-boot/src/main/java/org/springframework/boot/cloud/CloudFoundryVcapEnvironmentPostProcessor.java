@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2015 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@ import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.context.config.ConfigFileEnvironmentPostProcessor;
+import org.springframework.boot.context.config.ConfigFileApplicationListener;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.boot.json.JsonParser;
 import org.springframework.boot.json.JsonParserFactory;
@@ -88,7 +89,8 @@ import org.springframework.util.StringUtils;
  * @author Dave Syer
  * @author Andy Wilkinson
  */
-public class CloudFoundryVcapEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
+public class CloudFoundryVcapEnvironmentPostProcessor
+		implements EnvironmentPostProcessor, Ordered {
 
 	private static final Log logger = LogFactory
 			.getLog(CloudFoundryVcapEnvironmentPostProcessor.class);
@@ -98,7 +100,7 @@ public class CloudFoundryVcapEnvironmentPostProcessor implements EnvironmentPost
 	private static final String VCAP_SERVICES = "VCAP_SERVICES";
 
 	// Before ConfigFileApplicationListener so values there can use these ones
-	private int order = ConfigFileEnvironmentPostProcessor.DEFAULT_ORDER - 1;
+	private int order = ConfigFileApplicationListener.DEFAULT_ORDER - 1;
 
 	private final JsonParser parser = JsonParserFactory.getJsonParser();
 
@@ -121,8 +123,8 @@ public class CloudFoundryVcapEnvironmentPostProcessor implements EnvironmentPost
 			addWithPrefix(properties, getPropertiesFromServices(environment),
 					"vcap.services.");
 			MutablePropertySources propertySources = environment.getPropertySources();
-			if (propertySources
-					.contains(CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME)) {
+			if (propertySources.contains(
+					CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME)) {
 				propertySources.addAfter(
 						CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME,
 						new PropertiesPropertySource("vcap", properties));
