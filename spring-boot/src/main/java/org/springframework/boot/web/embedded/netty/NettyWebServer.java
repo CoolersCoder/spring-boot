@@ -16,13 +16,17 @@
 
 package org.springframework.boot.web.embedded.netty;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
+import java.net.BindException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
-import reactor.core.Loopback;
-import reactor.ipc.netty.NettyContext;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import reactor.ipc.netty.http.HttpResources;
 import reactor.ipc.netty.http.server.HttpServer;
+import reactor.ipc.netty.tcp.BlockingNettyContext;
 
+import org.springframework.boot.web.server.PortInUseException;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.boot.web.server.WebServerException;
 import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
@@ -33,17 +37,19 @@ import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
  * directly.
  *
  * @author Brian Clozel
+ * @author Madhura Bhave
+ * @author Andy Wilkinson
  * @since 2.0.0
  */
-public class NettyWebServer implements WebServer, Loopback {
+public class NettyWebServer implements WebServer {
 
-	private static CountDownLatch latch = new CountDownLatch(1);
+	private static final Log logger = LogFactory.getLog(NettyWebServer.class);
 
 	private final ReactorHttpHandlerAdapter handlerAdapter;
 
 	private final HttpServer reactorServer;
 
-	private AtomicReference<NettyContext> nettyContext = new AtomicReference<>();
+	private BlockingNettyContext nettyContext;
 
 	public NettyWebServer(HttpServer reactorServer,
 			ReactorHttpHandlerAdapter handlerAdapter) {
@@ -52,34 +58,43 @@ public class NettyWebServer implements WebServer, Loopback {
 	}
 
 	@Override
-	public Object connectedInput() {
-		return this.reactorServer;
-	}
-
-	@Override
-	public Object connectedOutput() {
-		return this.reactorServer;
-	}
-
-	@Override
 	public void start() throws WebServerException {
-		if (this.nettyContext.get() == null) {
-			this.nettyContext
-					.set(this.reactorServer.newHandler(this.handlerAdapter).block());
-			startDaemonAwaitThread();
+		if (this.nettyContext == null) {
+			try {
+				this.nettyContext = this.reactorServer.start(this.handlerAdapter);
+			}
+			catch (Exception ex) {
+				if (findBindException(ex) != null) {
+					SocketAddress address = this.reactorServer.options().getAddress();
+					if (address instanceof InetSocketAddress) {
+						throw new PortInUseException(
+								((InetSocketAddress) address).getPort());
+					}
+				}
+				throw new WebServerException("Unable to start Netty", ex);
+			}
+			NettyWebServer.logger.info("Netty started on port(s): " + getPort());
+			startDaemonAwaitThread(this.nettyContext);
 		}
 	}
 
-	private void startDaemonAwaitThread() {
+	private BindException findBindException(Exception ex) {
+		Throwable candidate = ex;
+		while (candidate != null) {
+			if (candidate instanceof BindException) {
+				return (BindException) candidate;
+			}
+			candidate = candidate.getCause();
+		}
+		return null;
+	}
+
+	private void startDaemonAwaitThread(BlockingNettyContext nettyContext) {
 		Thread awaitThread = new Thread("server") {
 
 			@Override
 			public void run() {
-				try {
-					NettyWebServer.latch.await();
-				}
-				catch (InterruptedException e) {
-				}
+				nettyContext.getContext().onClose().block();
 			}
 
 		};
@@ -90,17 +105,19 @@ public class NettyWebServer implements WebServer, Loopback {
 
 	@Override
 	public void stop() throws WebServerException {
-		NettyContext context = this.nettyContext.getAndSet(null);
-		if (context != null) {
-			context.dispose();
+		if (this.nettyContext != null) {
+			this.nettyContext.shutdown();
+			// temporary fix for gh-9146
+			this.nettyContext.getContext().onClose()
+					.doOnSuccess((o) -> HttpResources.reset()).block();
+			this.nettyContext = null;
 		}
-		latch.countDown();
 	}
 
 	@Override
 	public int getPort() {
-		if (this.nettyContext.get() != null) {
-			return this.nettyContext.get().address().getPort();
+		if (this.nettyContext != null) {
+			return this.nettyContext.getPort();
 		}
 		return 0;
 	}

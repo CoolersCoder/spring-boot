@@ -46,11 +46,6 @@
 		<module>spring-boot-sample-devtools</module>
 		<module>spring-boot-sample-flyway</module>
 		<module>spring-boot-sample-hateoas</module>
-		<module>spring-boot-sample-hypermedia</module>
-		<module>spring-boot-sample-hypermedia-gson</module>
-		<module>spring-boot-sample-hypermedia-jpa</module>
-		<module>spring-boot-sample-hypermedia-ui</module>
-		<module>spring-boot-sample-hypermedia-ui-secure</module>
 		<module>spring-boot-sample-integration</module>
 		<module>spring-boot-sample-jersey</module>
 		<module>spring-boot-sample-jersey1</module>
@@ -63,6 +58,7 @@
 		<module>spring-boot-sample-jta-bitronix</module>
 		<module>spring-boot-sample-jta-narayana</module>
 		<module>spring-boot-sample-jta-jndi</module>
+		<module>spring-boot-sample-junit-jupiter</module>
 		<module>spring-boot-sample-liquibase</module>
 		<module>spring-boot-sample-logback</module>
 		<module>spring-boot-sample-metrics-dropwizard</module>
@@ -71,6 +67,7 @@
 		<module>spring-boot-sample-parent-context</module>
 		<module>spring-boot-sample-profile</module>
 		<module>spring-boot-sample-property-validation</module>
+		<module>spring-boot-sample-quartz</module>
 		<module>spring-boot-sample-secure</module>
 		<module>spring-boot-sample-secure-oauth2</module>
 		<module>spring-boot-sample-secure-oauth2-actuator</module>
@@ -85,7 +82,6 @@
 		<module>spring-boot-sample-tomcat-jsp</module>
 		<module>spring-boot-sample-tomcat-ssl</module>
 		<module>spring-boot-sample-tomcat-multi-connectors</module>
-		<module>spring-boot-sample-tomcat80-ssl</module>
 		<module>spring-boot-sample-traditional</module>
 		<module>spring-boot-sample-undertow</module>
 		<module>spring-boot-sample-undertow-ssl</module>

@@ -36,15 +36,12 @@ import org.springframework.boot.actuate.endpoint.RequestMappingEndpoint;
 import org.springframework.boot.actuate.endpoint.ShutdownEndpoint;
 import org.springframework.boot.actuate.endpoint.TraceEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.AuditEventsMvcEndpoint;
-import org.springframework.boot.actuate.endpoint.mvc.DocsMvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.EndpointMvcAdapter;
 import org.springframework.boot.actuate.endpoint.mvc.EnvironmentMvcEndpoint;
-import org.springframework.boot.actuate.endpoint.mvc.HalJsonMvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.HealthMvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.JolokiaMvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.LogFileMvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.LoggersMvcEndpoint;
-import org.springframework.boot.actuate.endpoint.mvc.ManagementServletContext;
 import org.springframework.boot.actuate.endpoint.mvc.MetricsMvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.MvcEndpoint;
 import org.springframework.boot.actuate.endpoint.mvc.MvcEndpoints;
@@ -52,7 +49,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionEvaluationReport;
 import org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration;
 import org.springframework.boot.logging.LoggingSystem;
-import org.springframework.boot.test.util.EnvironmentTestUtils;
+import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mock.web.MockServletContext;
@@ -84,13 +81,12 @@ public class MvcEndpointPathConfigurationTests {
 
 	@Parameters(name = "{0}")
 	public static Object[] parameters() {
-		return new Object[] { new Object[] { "actuator", HalJsonMvcEndpoint.class },
+		return new Object[] {
 				new Object[] { "auditevents", AuditEventsMvcEndpoint.class },
 				new Object[] { "autoconfig", AutoConfigurationReportEndpoint.class },
 				new Object[] { "beans", BeansEndpoint.class },
 				new Object[] { "configprops",
 						ConfigurationPropertiesReportEndpoint.class },
-				new Object[] { "docs", DocsMvcEndpoint.class },
 				new Object[] { "dump", DumpEndpoint.class },
 				new Object[] { "env", EnvironmentMvcEndpoint.class },
 				new Object[] { "flyway", FlywayEndpoint.class },
@@ -117,10 +113,11 @@ public class MvcEndpointPathConfigurationTests {
 		this.context = new AnnotationConfigWebApplicationContext();
 		this.context.register(TestConfiguration.class);
 		this.context.setServletContext(new MockServletContext());
-		EnvironmentTestUtils.addEnvironment(this.context,
-				"endpoints." + this.endpointName + ".path" + ":/custom/path",
-				"endpoints." + this.endpointName + ".enabled:true",
-				"logging.file:target/test.log");
+		TestPropertyValues
+				.of("endpoints." + this.endpointName + ".path" + ":/custom/path",
+						"endpoints." + this.endpointName + ".enabled:true",
+						"logging.file:target/test.log")
+				.applyTo(this.context);
 		this.context.refresh();
 		assertThat(getConfiguredPath()).isEqualTo("/custom/path");
 	}
@@ -166,11 +163,6 @@ public class MvcEndpointPathConfigurationTests {
 		@Bean
 		public LiquibaseEndpoint liquibase() {
 			return new LiquibaseEndpoint(new SpringLiquibase());
-		}
-
-		@Bean
-		public DocsMvcEndpoint docs(ManagementServletContext managementServletContext) {
-			return new DocsMvcEndpoint(managementServletContext);
 		}
 
 	}

@@ -48,12 +48,6 @@
     ]
   },
   {
-    "name": "endpoints.hypermedia.enabled",
-    "type": "java.lang.Boolean",
-    "description": "Enable hypermedia support for endpoints.",
-    "defaultValue": false
-  },
-  {
     "name": "endpoints.info.path",
     "type": "java.lang.String",
     "description": "Endpoint URL path."
@@ -79,6 +73,12 @@
     "name": "endpoints.trace.path",
     "type": "java.lang.String",
     "description": "Endpoint URL path."
+  },
+  {
+	"name": "endpoints.trace.filter.enabled",
+	"type": "java.lang.Boolean",
+	"description": "Enable the trace servlet filter.",
+	"defaultValue": true
   },
   {
     "name": "info",
@@ -173,6 +173,12 @@
     "name": "management.health.mail.enabled",
     "type": "java.lang.Boolean",
     "description": "Enable Mail health check.",
+    "defaultValue": true
+  },
+  {
+    "name": "management.health.neo4j.enabled",
+    "type": "java.lang.Boolean",
+    "description": "Enable Neo4j health check.",
     "defaultValue": true
   },
   {

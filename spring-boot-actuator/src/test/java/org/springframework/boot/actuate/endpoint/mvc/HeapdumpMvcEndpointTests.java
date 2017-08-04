@@ -16,7 +16,6 @@
 
 package org.springframework.boot.actuate.endpoint.mvc;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
@@ -82,27 +81,29 @@ public class HeapdumpMvcEndpointTests {
 	@Test
 	public void invokeWhenDisabledShouldReturnNotFoundStatus() throws Exception {
 		this.endpoint.setEnabled(false);
-		this.mvc.perform(get("/heapdump")).andExpect(status().isNotFound());
+		this.mvc.perform(get("/application/heapdump")).andExpect(status().isNotFound());
 	}
 
 	@Test
 	public void invokeWhenNotAvailableShouldReturnServiceUnavailableStatus()
 			throws Exception {
 		this.endpoint.setAvailable(false);
-		this.mvc.perform(get("/heapdump")).andExpect(status().isServiceUnavailable());
+		this.mvc.perform(get("/application/heapdump"))
+				.andExpect(status().isServiceUnavailable());
 	}
 
 	@Test
 	public void invokeWhenLockedShouldReturnTooManyRequestsStatus() throws Exception {
 		this.endpoint.setLocked(true);
-		this.mvc.perform(get("/heapdump")).andExpect(status().isTooManyRequests());
+		this.mvc.perform(get("/application/heapdump"))
+				.andExpect(status().isTooManyRequests());
 		assertThat(Thread.interrupted()).isTrue();
 	}
 
 	@Test
 	public void invokeShouldReturnGzipContent() throws Exception {
-		MvcResult result = this.mvc.perform(get("/heapdump")).andExpect(status().isOk())
-				.andReturn();
+		MvcResult result = this.mvc.perform(get("/application/heapdump"))
+				.andExpect(status().isOk()).andReturn();
 		byte[] bytes = result.getResponse().getContentAsByteArray();
 		GZIPInputStream stream = new GZIPInputStream(new ByteArrayInputStream(bytes));
 		byte[] uncompressed = FileCopyUtils.copyToByteArray(stream);
@@ -111,7 +112,7 @@ public class HeapdumpMvcEndpointTests {
 
 	@Test
 	public void invokeOptionsShouldReturnSize() throws Exception {
-		this.mvc.perform(options("/heapdump")).andExpect(status().isOk());
+		this.mvc.perform(options("/application/heapdump")).andExpect(status().isOk());
 	}
 
 	@Import({ JacksonAutoConfiguration.class, AuditAutoConfiguration.class,
@@ -148,24 +149,17 @@ public class HeapdumpMvcEndpointTests {
 
 		@Override
 		protected HeapDumper createHeapDumper() {
-			return new HeapDumper() {
-
-				@Override
-				public void dumpHeap(File file, boolean live)
-						throws IOException, InterruptedException {
-					if (!TestHeapdumpMvcEndpoint.this.available) {
-						throw new HeapDumperUnavailableException("Not available", null);
-					}
-					if (TestHeapdumpMvcEndpoint.this.locked) {
-						throw new InterruptedException();
-					}
-					if (file.exists()) {
-						throw new IOException("File exists");
-					}
-					FileCopyUtils.copy(TestHeapdumpMvcEndpoint.this.heapDump.getBytes(),
-							file);
+			return (file, live) -> {
+				if (!TestHeapdumpMvcEndpoint.this.available) {
+					throw new HeapDumperUnavailableException("Not available", null);
 				}
-
+				if (TestHeapdumpMvcEndpoint.this.locked) {
+					throw new InterruptedException();
+				}
+				if (file.exists()) {
+					throw new IOException("File exists");
+				}
+				FileCopyUtils.copy(this.heapDump.getBytes(), file);
 			};
 		}
 

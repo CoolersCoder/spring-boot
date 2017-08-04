@@ -16,7 +16,6 @@
 
 package org.springframework.boot.actuate.endpoint.mvc;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -73,7 +72,7 @@ public class HeapdumpMvcEndpointSecureOptionsTests {
 
 	@Test
 	public void invokeOptionsShouldReturnSize() throws Exception {
-		this.mvc.perform(options("/heapdump")).andExpect(status().isOk());
+		this.mvc.perform(options("/application/heapdump")).andExpect(status().isOk());
 	}
 
 	@Import({ JacksonAutoConfiguration.class,
@@ -110,24 +109,17 @@ public class HeapdumpMvcEndpointSecureOptionsTests {
 
 		@Override
 		protected HeapDumper createHeapDumper() {
-			return new HeapDumper() {
-
-				@Override
-				public void dumpHeap(File file, boolean live)
-						throws IOException, InterruptedException {
-					if (!TestHeapdumpMvcEndpoint.this.available) {
-						throw new HeapDumperUnavailableException("Not available", null);
-					}
-					if (TestHeapdumpMvcEndpoint.this.locked) {
-						throw new InterruptedException();
-					}
-					if (file.exists()) {
-						throw new IOException("File exists");
-					}
-					FileCopyUtils.copy(TestHeapdumpMvcEndpoint.this.heapDump.getBytes(),
-							file);
+			return (file, live) -> {
+				if (!TestHeapdumpMvcEndpoint.this.available) {
+					throw new HeapDumperUnavailableException("Not available", null);
 				}
-
+				if (TestHeapdumpMvcEndpoint.this.locked) {
+					throw new InterruptedException();
+				}
+				if (file.exists()) {
+					throw new IOException("File exists");
+				}
+				FileCopyUtils.copy(this.heapDump.getBytes(), file);
 			};
 		}
 

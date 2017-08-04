@@ -22,7 +22,6 @@ import org.springframework.boot.actuate.endpoint.LoggersEndpoint;
 import org.springframework.boot.actuate.endpoint.LoggersEndpoint.LoggerLevels;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.logging.LogLevel;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,6 +32,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
  *
  * @author Ben Hale
  * @author Kazuki Shimizu
+ * @author Eddú Meléndez
  * @since 1.5.0
  */
 @ConfigurationProperties(prefix = "endpoints.loggers")
@@ -47,7 +47,6 @@ public class LoggersMvcEndpoint extends EndpointMvcAdapter {
 
 	@ActuatorGetMapping("/{name:.*}")
 	@ResponseBody
-	@HypermediaDisabled
 	public Object get(@PathVariable String name) {
 		if (!this.delegate.isEnabled()) {
 			// Shouldn't happen - MVC endpoint shouldn't be registered when delegate's
@@ -60,7 +59,6 @@ public class LoggersMvcEndpoint extends EndpointMvcAdapter {
 
 	@ActuatorPostMapping("/{name:.*}")
 	@ResponseBody
-	@HypermediaDisabled
 	public Object set(@PathVariable String name,
 			@RequestBody Map<String, String> configuration) {
 		if (!this.delegate.isEnabled()) {
@@ -68,10 +66,19 @@ public class LoggersMvcEndpoint extends EndpointMvcAdapter {
 			// disabled
 			return getDisabledResponse();
 		}
+		try {
+			LogLevel logLevel = getLogLevel(configuration);
+			this.delegate.setLogLevel(name, logLevel);
+			return ResponseEntity.noContent().build();
+		}
+		catch (IllegalArgumentException ex) {
+			return ResponseEntity.badRequest().build();
+		}
+	}
+
+	private LogLevel getLogLevel(Map<String, String> configuration) {
 		String level = configuration.get("configuredLevel");
-		LogLevel logLevel = level == null ? null : LogLevel.valueOf(level.toUpperCase());
-		this.delegate.setLogLevel(name, logLevel);
-		return HttpEntity.EMPTY;
+		return (level == null ? null : LogLevel.valueOf(level.toUpperCase()));
 	}
 
 }

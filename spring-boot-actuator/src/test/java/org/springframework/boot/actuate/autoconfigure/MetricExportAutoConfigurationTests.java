@@ -34,14 +34,11 @@ import org.springframework.boot.actuate.metrics.statsd.StatsdMetricWriter;
 import org.springframework.boot.actuate.metrics.writer.GaugeWriter;
 import org.springframework.boot.actuate.metrics.writer.MetricWriter;
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
-import org.springframework.boot.test.util.EnvironmentTestUtils;
+import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.channel.FixedSubscriberChannel;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.MessageHandler;
-import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.SubscribableChannel;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -148,8 +145,8 @@ public class MetricExportAutoConfigurationTests {
 	@Test
 	public void statsdWithHost() throws Exception {
 		this.context = new AnnotationConfigApplicationContext();
-		EnvironmentTestUtils.addEnvironment(this.context,
-				"spring.metrics.export.statsd.host=localhost");
+		TestPropertyValues.of("spring.metrics.export.statsd.host=localhost")
+				.applyTo(this.context);
 		this.context.register(MetricEndpointConfiguration.class,
 				MetricExportAutoConfiguration.class,
 				PropertyPlaceholderAutoConfiguration.class);
@@ -169,12 +166,7 @@ public class MetricExportAutoConfigurationTests {
 
 		@Bean
 		public SubscribableChannel metricsChannel() {
-			return new FixedSubscriberChannel(new MessageHandler() {
-
-				@Override
-				public void handleMessage(Message<?> message) throws MessagingException {
-				}
-
+			return new FixedSubscriberChannel((message) -> {
 			});
 		}
 

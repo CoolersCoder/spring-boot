@@ -95,7 +95,8 @@ public class GroovyCompiler {
 				new SpringBootDependenciesDependencyManagement());
 
 		AetherGrapeEngine grapeEngine = AetherGrapeEngineFactory.create(this.loader,
-				configuration.getRepositoryConfiguration(), resolutionContext);
+				configuration.getRepositoryConfiguration(), resolutionContext,
+				configuration.isQuiet());
 
 		GrapeEngineInstaller.install(grapeEngine);
 
@@ -123,7 +124,7 @@ public class GroovyCompiler {
 				.load(SpringBootAstTransformation.class)) {
 			this.transformations.add(transformation);
 		}
-		Collections.sort(this.transformations, AnnotationAwareOrderComparator.INSTANCE);
+		this.transformations.sort(AnnotationAwareOrderComparator.INSTANCE);
 	}
 
 	/**

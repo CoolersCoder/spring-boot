@@ -42,7 +42,7 @@ public class AuditEventsMvcEndpoint extends AbstractNamedMvcEndpoint {
 	private final AuditEventRepository auditEventRepository;
 
 	public AuditEventsMvcEndpoint(AuditEventRepository auditEventRepository) {
-		super("auditevents", "/auditevents", true);
+		super("auditevents", "/auditevents");
 		Assert.notNull(auditEventRepository, "AuditEventRepository must not be null");
 		this.auditEventRepository = auditEventRepository;
 	}
@@ -51,7 +51,7 @@ public class AuditEventsMvcEndpoint extends AbstractNamedMvcEndpoint {
 	@ResponseBody
 	public ResponseEntity<?> findByPrincipalAndAfterAndType(
 			@RequestParam(required = false) String principal,
-			@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssZ") Date after,
+			@RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssZ") Date after,
 			@RequestParam(required = false) String type) {
 		if (!isEnabled()) {
 			return DISABLED_RESPONSE;

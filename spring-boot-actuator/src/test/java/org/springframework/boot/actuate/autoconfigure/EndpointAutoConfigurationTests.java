@@ -17,7 +17,6 @@
 package org.springframework.boot.actuate.autoconfigure;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -55,14 +54,16 @@ import org.springframework.boot.autoconfigure.info.ProjectInfoProperties;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
 import org.springframework.boot.autoconfigure.jdbc.EmbeddedDataSourceConfiguration;
 import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
-import org.springframework.boot.bind.PropertySourcesBinder;
+import org.springframework.boot.context.properties.bind.Bindable;
+import org.springframework.boot.context.properties.bind.Binder;
+import org.springframework.boot.context.properties.source.MapConfigurationPropertySource;
 import org.springframework.boot.logging.LoggingSystem;
-import org.springframework.boot.test.util.EnvironmentTestUtils;
+import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.validation.BindException;
@@ -170,7 +171,7 @@ public class EndpointAutoConfigurationTests {
 	@Test
 	public void testInfoEndpoint() throws Exception {
 		this.context = new AnnotationConfigApplicationContext();
-		EnvironmentTestUtils.addEnvironment(this.context, "info.foo:bar");
+		TestPropertyValues.of("info.foo:bar").applyTo(this.context);
 		this.context.register(ProjectInfoAutoConfiguration.class,
 				InfoContributorAutoConfiguration.class, EndpointAutoConfiguration.class);
 		this.context.refresh();
@@ -184,8 +185,8 @@ public class EndpointAutoConfigurationTests {
 	@Test
 	public void testInfoEndpointNoGitProperties() throws Exception {
 		this.context = new AnnotationConfigApplicationContext();
-		EnvironmentTestUtils.addEnvironment(this.context,
-				"spring.info.git.location:classpath:nonexistent");
+		TestPropertyValues.of("spring.info.git.location:classpath:nonexistent")
+				.applyTo(this.context);
 		this.context.register(InfoContributorAutoConfiguration.class,
 				EndpointAutoConfiguration.class);
 		this.context.refresh();
@@ -197,7 +198,7 @@ public class EndpointAutoConfigurationTests {
 	@Test
 	public void testInfoEndpointOrdering() throws Exception {
 		this.context = new AnnotationConfigApplicationContext();
-		EnvironmentTestUtils.addEnvironment(this.context, "info.name:foo");
+		TestPropertyValues.of("info.name:foo").applyTo(this.context);
 		this.context.register(CustomInfoContributorsConfig.class,
 				ProjectInfoAutoConfiguration.class,
 				InfoContributorAutoConfiguration.class, EndpointAutoConfiguration.class);
@@ -275,12 +276,9 @@ public class EndpointAutoConfigurationTests {
 
 		@Bean
 		PublicMetrics customPublicMetrics() {
-			return new PublicMetrics() {
-				@Override
-				public Collection<Metric<?>> metrics() {
-					Metric<Integer> metric = new Metric<>("foo", 1);
-					return Collections.<Metric<?>>singleton(metric);
-				}
+			return () -> {
+				Metric<Integer> metric = new Metric<>("foo", 1);
+				return Collections.<Metric<?>>singleton(metric);
 			};
 		}
 
@@ -292,12 +290,9 @@ public class EndpointAutoConfigurationTests {
 		@Bean
 		@Order(InfoContributorAutoConfiguration.DEFAULT_ORDER - 1)
 		public InfoContributor myInfoContributor() {
-			return new InfoContributor() {
-				@Override
-				public void contribute(Info.Builder builder) {
-					builder.withDetail("name", "bar");
-					builder.withDetail("version", "1.0");
-				}
+			return (builder) -> {
+				builder.withDetail("name", "bar");
+				builder.withDetail("version", "1.0");
 			};
 		}
 
@@ -310,17 +305,18 @@ public class EndpointAutoConfigurationTests {
 
 		private static class GitFullInfoContributor implements InfoContributor {
 
+			private static final ResolvableType STRING_OBJECT_MAP = ResolvableType
+					.forClassWithGenerics(Map.class, String.class, Object.class);
+
 			private Map<String, Object> content = new LinkedHashMap<>();
 
 			GitFullInfoContributor(Resource location) throws BindException, IOException {
-				if (location.exists()) {
-					Properties gitInfoProperties = PropertiesLoaderUtils
-							.loadProperties(location);
-					PropertiesPropertySource gitPropertySource = new PropertiesPropertySource(
-							"git", gitInfoProperties);
-					this.content = new PropertySourcesBinder(gitPropertySource)
-							.extractAll("git");
+				if (!location.exists()) {
+					return;
 				}
+				Properties properties = PropertiesLoaderUtils.loadProperties(location);
+				new Binder(new MapConfigurationPropertySource(properties)).bind("info",
+						Bindable.of(STRING_OBJECT_MAP).withExistingValue(this.content));
 			}
 
 			@Override

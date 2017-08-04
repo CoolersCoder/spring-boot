@@ -26,12 +26,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import org.springframework.boot.actuate.metrics.CounterService;
 import org.springframework.boot.actuate.metrics.GaugeService;
-import org.springframework.boot.test.util.EnvironmentTestUtils;
+import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -95,23 +93,25 @@ public class MetricFilterAutoConfigurationTests {
 	public void recordsHttpInteractions() throws Exception {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(
 				Config.class, MetricFilterAutoConfiguration.class);
-		Filter filter = context.getBean(Filter.class);
-		final MockHttpServletRequest request = new MockHttpServletRequest("GET",
-				"/test/path");
-		final MockHttpServletResponse response = new MockHttpServletResponse();
-		FilterChain chain = mock(FilterChain.class);
-		willAnswer(new Answer<Object>() {
-			@Override
-			public Object answer(InvocationOnMock invocation) throws Throwable {
+		try {
+			Filter filter = context.getBean(Filter.class);
+			MockHttpServletRequest request = new MockHttpServletRequest("GET",
+					"/test/path");
+			MockHttpServletResponse response = new MockHttpServletResponse();
+			FilterChain chain = mock(FilterChain.class);
+			willAnswer((invocation) -> {
 				response.setStatus(200);
 				return null;
-			}
-		}).given(chain).doFilter(request, response);
-		filter.doFilter(request, response, chain);
-		verify(context.getBean(CounterService.class)).increment("status.200.test.path");
-		verify(context.getBean(GaugeService.class)).submit(eq("response.test.path"),
-				anyDouble());
-		context.close();
+			}).given(chain).doFilter(request, response);
+			filter.doFilter(request, response, chain);
+			verify(context.getBean(CounterService.class))
+					.increment("status.200.test.path");
+			verify(context.getBean(GaugeService.class)).submit(eq("response.test.path"),
+					anyDouble());
+		}
+		finally {
+			context.close();
+		}
 	}
 
 	@Test
@@ -234,8 +234,7 @@ public class MetricFilterAutoConfigurationTests {
 	@Test
 	public void skipsFilterIfPropertyDisabled() throws Exception {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-		EnvironmentTestUtils.addEnvironment(context,
-				"endpoints.metrics.filter.enabled:false");
+		TestPropertyValues.of("endpoints.metrics.filter.enabled:false").applyTo(context);
 		context.register(Config.class, MetricFilterAutoConfiguration.class);
 		context.refresh();
 		assertThat(context.getBeansOfType(Filter.class).size()).isEqualTo(0);
@@ -355,21 +354,18 @@ public class MetricFilterAutoConfigurationTests {
 			throws Exception {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.register(Config.class, MetricFilterAutoConfiguration.class);
-		EnvironmentTestUtils.addEnvironment(context,
-				"endpoints.metrics.filter.gauge-submissions=merged,per-http-method",
-				"endpoints.metrics.filter.counter-submissions=merged,per-http-method");
+		TestPropertyValues
+				.of("endpoints.metrics.filter.gauge-submissions=merged,per-http-method",
+						"endpoints.metrics.filter.counter-submissions=merged,per-http-method")
+				.applyTo(context);
 		context.refresh();
 		Filter filter = context.getBean(Filter.class);
-		final MockHttpServletRequest request = new MockHttpServletRequest("PUT",
-				"/test/path");
-		final MockHttpServletResponse response = new MockHttpServletResponse();
+		MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/test/path");
+		MockHttpServletResponse response = new MockHttpServletResponse();
 		FilterChain chain = mock(FilterChain.class);
-		willAnswer(new Answer<Object>() {
-			@Override
-			public Object answer(InvocationOnMock invocation) throws Throwable {
-				response.setStatus(200);
-				return null;
-			}
+		willAnswer((invocation) -> {
+			response.setStatus(200);
+			return null;
 		}).given(chain).doFilter(request, response);
 		filter.doFilter(request, response, chain);
 		verify(context.getBean(GaugeService.class)).submit(eq("response.test.path"),
@@ -387,21 +383,16 @@ public class MetricFilterAutoConfigurationTests {
 	public void doesNotRecordRolledUpMetricsIfConfigured() throws Exception {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.register(Config.class, MetricFilterAutoConfiguration.class);
-		EnvironmentTestUtils.addEnvironment(context,
-				"endpoints.metrics.filter.gauge-submissions=",
-				"endpoints.metrics.filter.counter-submissions=");
+		TestPropertyValues.of("endpoints.metrics.filter.gauge-submissions=",
+				"endpoints.metrics.filter.counter-submissions=").applyTo(context);
 		context.refresh();
 		Filter filter = context.getBean(Filter.class);
-		final MockHttpServletRequest request = new MockHttpServletRequest("PUT",
-				"/test/path");
-		final MockHttpServletResponse response = new MockHttpServletResponse();
+		MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/test/path");
+		MockHttpServletResponse response = new MockHttpServletResponse();
 		FilterChain chain = mock(FilterChain.class);
-		willAnswer(new Answer<Object>() {
-			@Override
-			public Object answer(InvocationOnMock invocation) throws Throwable {
-				response.setStatus(200);
-				return null;
-			}
+		willAnswer((invocation) -> {
+			response.setStatus(200);
+			return null;
 		}).given(chain).doFilter(request, response);
 		filter.doFilter(request, response, chain);
 		verify(context.getBean(GaugeService.class), never()).submit(anyString(),
@@ -414,31 +405,32 @@ public class MetricFilterAutoConfigurationTests {
 	public void whenExceptionIsThrownResponseStatusIsUsedWhenResponseHasBeenCommitted()
 			throws Exception {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-		context.register(Config.class, MetricFilterAutoConfiguration.class);
-		context.refresh();
-		Filter filter = context.getBean(Filter.class);
-		final MockHttpServletRequest request = new MockHttpServletRequest("GET",
-				"/test/path");
-		final MockHttpServletResponse response = new MockHttpServletResponse();
-		FilterChain chain = mock(FilterChain.class);
-		willAnswer(new Answer<Object>() {
-			@Override
-			public Object answer(InvocationOnMock invocation) throws Throwable {
+		try {
+			context.register(Config.class, MetricFilterAutoConfiguration.class);
+			context.refresh();
+			Filter filter = context.getBean(Filter.class);
+			MockHttpServletRequest request = new MockHttpServletRequest("GET",
+					"/test/path");
+			MockHttpServletResponse response = new MockHttpServletResponse();
+			FilterChain chain = mock(FilterChain.class);
+			willAnswer((invocation) -> {
 				response.setStatus(200);
 				response.setCommitted(true);
 				throw new IOException();
+			}).given(chain).doFilter(request, response);
+			try {
+				filter.doFilter(request, response, chain);
+				fail();
 			}
-		}).given(chain).doFilter(request, response);
-		try {
-			filter.doFilter(request, response, chain);
-			fail();
+			catch (IOException ex) {
+				// Continue
+			}
+			verify(context.getBean(CounterService.class))
+					.increment(eq("status.200.test.path"));
 		}
-		catch (IOException ex) {
-			// Continue
+		finally {
+			context.close();
 		}
-		verify(context.getBean(CounterService.class))
-				.increment(eq("status.200.test.path"));
-		context.close();
 	}
 
 	@Configuration
@@ -506,16 +498,12 @@ public class MetricFilterAutoConfigurationTests {
 		@RequestMapping("create")
 		public DeferredResult<ResponseEntity<String>> create() {
 			final DeferredResult<ResponseEntity<String>> result = new DeferredResult<>();
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						MetricFilterTestController.this.latch.await();
-						result.setResult(
-								new ResponseEntity<>("Done", HttpStatus.CREATED));
-					}
-					catch (InterruptedException ex) {
-					}
+			new Thread(() -> {
+				try {
+					MetricFilterTestController.this.latch.await();
+					result.setResult(new ResponseEntity<>("Done", HttpStatus.CREATED));
+				}
+				catch (InterruptedException ex) {
 				}
 			}).start();
 			return result;
@@ -524,16 +512,12 @@ public class MetricFilterAutoConfigurationTests {
 		@RequestMapping("createFailure")
 		public DeferredResult<ResponseEntity<String>> createFailure() {
 			final DeferredResult<ResponseEntity<String>> result = new DeferredResult<>();
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						MetricFilterTestController.this.latch.await();
-						result.setErrorResult(new Exception("It failed"));
-					}
-					catch (InterruptedException ex) {
-
-					}
+			new Thread(() -> {
+				try {
+					MetricFilterTestController.this.latch.await();
+					result.setErrorResult(new Exception("It failed"));
+				}
+				catch (InterruptedException ex) {
 				}
 			}).start();
 			return result;

@@ -43,9 +43,6 @@
 			</roles>
 		</developer>
 	</developers>
-	<prerequisites>
-		<maven>3.2.1</maven>
-	</prerequisites>
 	<properties>
 		<main.basedir>${basedir}</main.basedir>
 	</properties>
@@ -89,7 +86,6 @@
 				<module>spring-boot-devtools</module>
 				<module>spring-boot-docs</module>
 				<module>spring-boot-starters</module>
-				<module>spring-boot-actuator-docs</module>
 				<module>spring-boot-cli</module>
 			</modules>
 		</profile>

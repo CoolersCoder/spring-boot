@@ -16,8 +16,6 @@
 
 package org.springframework.boot.actuate.endpoint.mvc;
 
-import java.security.Principal;
-
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,20 +29,17 @@ import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoCon
 import org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration;
 import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
-import org.springframework.boot.junit.runner.classpath.ClassPathExclusions;
-import org.springframework.boot.junit.runner.classpath.ModifiedClassPathRunner;
-import org.springframework.boot.test.util.EnvironmentTestUtils;
+import org.springframework.boot.test.util.TestPropertyValues;
+import org.springframework.boot.testsupport.runner.classpath.ClassPathExclusions;
+import org.springframework.boot.testsupport.runner.classpath.ModifiedClassPathRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -67,44 +62,16 @@ public class NoSpringSecurityHealthMvcEndpointIntegrationTests {
 	}
 
 	@Test
-	public void healthWhenRightRoleNotPresentShouldNotExposeHealthDetails()
-			throws Exception {
-		this.context = new AnnotationConfigWebApplicationContext();
-		this.context.setServletContext(new MockServletContext());
-		this.context.register(TestConfiguration.class);
-		this.context.refresh();
-		MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(this.context).build();
-		mockMvc.perform(get("/health").with(getRequestPostProcessor()))
-				.andExpect(status().isOk())
-				.andExpect(content().string("{\"status\":\"UP\"}"));
-	}
-
-	@Test
 	public void healthDetailPresent() throws Exception {
 		this.context = new AnnotationConfigWebApplicationContext();
 		this.context.setServletContext(new MockServletContext());
 		this.context.register(TestConfiguration.class);
-		EnvironmentTestUtils.addEnvironment(this.context,
-				"management.security.enabled:false");
+		TestPropertyValues.of("management.security.enabled:false").applyTo(this.context);
 		this.context.refresh();
 		MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(this.context).build();
-		mockMvc.perform(get("/health")).andExpect(status().isOk())
+		mockMvc.perform(get("/application/health")).andExpect(status().isOk())
 				.andExpect(content().string(containsString(
 						"\"status\":\"UP\",\"test\":{\"status\":\"UP\",\"hello\":\"world\"}")));
-	}
-
-	private RequestPostProcessor getRequestPostProcessor() {
-		return new RequestPostProcessor() {
-
-			@Override
-			public MockHttpServletRequest postProcessRequest(
-					MockHttpServletRequest request) {
-				Principal principal = mock(Principal.class);
-				request.setUserPrincipal(principal);
-				return request;
-			}
-
-		};
 	}
 
 	@ImportAutoConfiguration({ JacksonAutoConfiguration.class,
@@ -116,14 +83,7 @@ public class NoSpringSecurityHealthMvcEndpointIntegrationTests {
 
 		@Bean
 		public HealthIndicator testHealthIndicator() {
-			return new HealthIndicator() {
-
-				@Override
-				public Health health() {
-					return Health.up().withDetail("hello", "world").build();
-				}
-
-			};
+			return () -> Health.up().withDetail("hello", "world").build();
 		}
 
 	}

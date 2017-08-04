@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2016 the original author or authors.
+ * Copyright 2012-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ShutdownEndpointTests extends AbstractEndpointTests<ShutdownEndpoint> {
 
 	public ShutdownEndpointTests() {
-		super(Config.class, ShutdownEndpoint.class, "shutdown", true,
-				"endpoints.shutdown");
+		super(Config.class, ShutdownEndpoint.class, "shutdown", "endpoints.shutdown");
 	}
 
 	@Override
@@ -88,15 +87,10 @@ public class ShutdownEndpointTests extends AbstractEndpointTests<ShutdownEndpoin
 
 		@Bean
 		public ApplicationListener<ContextClosedEvent> listener() {
-			return new ApplicationListener<ContextClosedEvent>() {
-
-				@Override
-				public void onApplicationEvent(ContextClosedEvent event) {
-					Config.this.threadContextClassLoader = Thread.currentThread()
-							.getContextClassLoader();
-					Config.this.latch.countDown();
-				}
-
+			return (event) -> {
+				this.threadContextClassLoader = Thread.currentThread()
+						.getContextClassLoader();
+				this.latch.countDown();
 			};
 
 		}

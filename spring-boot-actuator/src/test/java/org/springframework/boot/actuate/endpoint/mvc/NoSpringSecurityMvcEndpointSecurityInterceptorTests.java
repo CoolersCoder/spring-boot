@@ -27,8 +27,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import org.springframework.boot.actuate.endpoint.AbstractEndpoint;
-import org.springframework.boot.junit.runner.classpath.ClassPathExclusions;
-import org.springframework.boot.junit.runner.classpath.ModifiedClassPathRunner;
+import org.springframework.boot.testsupport.runner.classpath.ClassPathExclusions;
+import org.springframework.boot.testsupport.runner.classpath.ModifiedClassPathRunner;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.web.method.HandlerMethod;
@@ -74,8 +74,7 @@ public class NoSpringSecurityMvcEndpointSecurityInterceptorTests {
 	}
 
 	@Test
-	public void sensitiveEndpointIfRoleNotPresentShouldNotValidateAuthorities()
-			throws Exception {
+	public void endpointIfRoleNotPresentShouldNotValidateAuthorities() throws Exception {
 		Principal principal = mock(Principal.class);
 		this.request.setUserPrincipal(principal);
 		this.servletContext.declareRoles("HERO");

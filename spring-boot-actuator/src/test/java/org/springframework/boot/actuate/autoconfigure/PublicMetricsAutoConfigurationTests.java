@@ -16,7 +16,6 @@
 
 package org.springframework.boot.actuate.autoconfigure;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,12 +39,12 @@ import org.springframework.boot.actuate.endpoint.TomcatPublicMetrics;
 import org.springframework.boot.actuate.metrics.Metric;
 import org.springframework.boot.actuate.metrics.rich.RichGauge;
 import org.springframework.boot.actuate.metrics.rich.RichGaugeReader;
+import org.springframework.boot.actuate.servlet.MockServletWebServerFactory;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
 import org.springframework.boot.autoconfigure.jdbc.metadata.DataSourcePoolMetadataProvidersConfiguration;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext;
-import org.springframework.boot.web.servlet.server.MockServletWebServerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -54,10 +53,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.util.SocketUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
@@ -126,9 +123,10 @@ public class PublicMetricsAutoConfigurationTests {
 	}
 
 	@Test
-	public void autoDataSource() {
+	public void autoDataSource() throws SQLException {
 		load(DataSourceAutoConfiguration.class);
 		PublicMetrics bean = this.context.getBean(DataSourcePublicMetrics.class);
+		this.context.getBean(DataSource.class).getConnection().close();
 		Collection<Metric<?>> metrics = bean.metrics();
 		assertMetrics(metrics, "datasource.primary.active", "datasource.primary.usage");
 	}
@@ -140,18 +138,10 @@ public class PublicMetricsAutoConfigurationTests {
 		Collection<Metric<?>> metrics = bean.metrics();
 		assertMetrics(metrics, "datasource.tomcat.active", "datasource.tomcat.usage",
 				"datasource.commonsDbcp.active", "datasource.commonsDbcp.usage");
-
 		// Hikari won't work unless a first connection has been retrieved
 		JdbcTemplate jdbcTemplate = new JdbcTemplate(
 				this.context.getBean("hikariDS", DataSource.class));
-		jdbcTemplate.execute(new ConnectionCallback<Void>() {
-			@Override
-			public Void doInConnection(Connection connection)
-					throws SQLException, DataAccessException {
-				return null;
-			}
-		});
-
+		jdbcTemplate.execute((ConnectionCallback<Void>) (connection) -> null);
 		Collection<Metric<?>> anotherMetrics = bean.metrics();
 		assertMetrics(anotherMetrics, "datasource.tomcat.active",
 				"datasource.tomcat.usage", "datasource.hikariDS.active",
@@ -346,9 +336,7 @@ public class PublicMetricsAutoConfigurationTests {
 
 		@Bean
 		public TomcatServletWebServerFactory webServerFactory() {
-			TomcatServletWebServerFactory factory = new TomcatServletWebServerFactory();
-			factory.setPort(SocketUtils.findAvailableTcpPort(40000));
-			return factory;
+			return new TomcatServletWebServerFactory(0);
 		}
 
 	}

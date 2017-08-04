@@ -22,8 +22,6 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,17 +72,17 @@ public class ShutdownMvcEndpointTests {
 	}
 
 	@Test
-	public void contentTypeDefaultsToActuatorV1Json() throws Exception {
-		this.mvc.perform(post("/shutdown")).andExpect(status().isOk())
+	public void contentTypeDefaultsToActuatorV2Json() throws Exception {
+		this.mvc.perform(post("/application/shutdown")).andExpect(status().isOk())
 				.andExpect(header().string("Content-Type",
-						"application/vnd.spring-boot.actuator.v1+json;charset=UTF-8"));
+						"application/vnd.spring-boot.actuator.v2+json;charset=UTF-8"));
 		assertThat(this.context.getBean(CountDownLatch.class).await(30, TimeUnit.SECONDS))
 				.isTrue();
 	}
 
 	@Test
 	public void contentTypeCanBeApplicationJson() throws Exception {
-		this.mvc.perform(post("/shutdown").header(HttpHeaders.ACCEPT,
+		this.mvc.perform(post("/application/shutdown").header(HttpHeaders.ACCEPT,
 				MediaType.APPLICATION_JSON_VALUE)).andExpect(status().isOk())
 				.andExpect(header().string("Content-Type",
 						MediaType.APPLICATION_JSON_UTF8_VALUE));
@@ -123,14 +121,9 @@ public class ShutdownMvcEndpointTests {
 				throws BeansException {
 			ConfigurableApplicationContext mockContext = mock(
 					ConfigurableApplicationContext.class);
-			willAnswer(new Answer<Void>() {
-
-				@Override
-				public Void answer(InvocationOnMock invocation) throws Throwable {
-					TestShutdownEndpoint.this.contextCloseLatch.countDown();
-					return null;
-				}
-
+			willAnswer((invocation) -> {
+				TestShutdownEndpoint.this.contextCloseLatch.countDown();
+				return null;
 			}).given(mockContext).close();
 			super.setApplicationContext(mockContext);
 		}
